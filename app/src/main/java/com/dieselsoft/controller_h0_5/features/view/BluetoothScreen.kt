@@ -35,10 +35,11 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Valor: ${value.toInt()}")
-        Slider(
+        SimpleArcKnob(
             value = value,
             onValueChange = { value = it },
-            valueRange = 0f..255f
+            minValue = 0f,
+            maxValue = 255f
         )
 
         Button(
