@@ -12,7 +12,22 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun BluetoothScreen(viewModel: BluetoothViewModel) {
     val isConnected by viewModel.isConnected.collectAsState()
-    var value by remember { mutableFloatStateOf(0f) }
+//    var value by remember { mutableFloatStateOf(0f) }
+    val currentValue by viewModel.currentValue.collectAsState()
+    var knobValue by remember { mutableFloatStateOf(currentValue.toFloat()) }
+
+    LaunchedEffect(currentValue) {
+        knobValue = currentValue.toFloat()
+    }
+
+    var previousKnobValue by remember { mutableStateOf(knobValue) }
+    LaunchedEffect(knobValue) {
+        val intValue = knobValue.toInt()
+        if (intValue != previousKnobValue.toInt() && isConnected) {
+            viewModel.updateAndSendValue(intValue)
+        }
+        previousKnobValue = knobValue
+    }
 
     Column(
         modifier = Modifier
@@ -34,19 +49,24 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text("Valor: ${value.toInt()}")
+        Text("Valor: ${knobValue.toInt()}")
         SimpleArcKnob(
-            value = value,
-            onValueChange = { value = it },
+            value = knobValue,
+            onValueChange = { knobValue = it },
             minValue = 0f,
             maxValue = 255f
         )
 
         Button(
-            onClick = { viewModel.sendValue(value.toInt()) },
-            modifier = Modifier.padding(top = 16.dp)
+            onClick = {
+                if (isConnected) {
+                    viewModel.sendValue(knobValue.toInt())
+                }
+            },
+            modifier = Modifier.padding(top = 16.dp),
+            enabled = isConnected
         ) {
-            Text("Enviar")
+            Text("Enviar Manualmente")
         }
 
         if (isConnected) {

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class BluetoothViewModel : ViewModel() {
@@ -17,10 +18,22 @@ class BluetoothViewModel : ViewModel() {
     private val _isConnected = MutableStateFlow(false)
     val isConnected = _isConnected.asStateFlow()
 
+    private val _currentValue = MutableStateFlow(0)
+    val currentValue: StateFlow<Int> = _currentValue.asStateFlow()
+
     fun connect() {
         viewModelScope.launch {
             val success = repository.connect()
             _isConnected.value = success
+        }
+    }
+
+    fun updateAndSendValue(value: Int){
+        viewModelScope.launch {
+            _currentValue.value = value
+            if (_isConnected.value){
+                sendValueUseCase.execute(value)
+            }
         }
     }
 
