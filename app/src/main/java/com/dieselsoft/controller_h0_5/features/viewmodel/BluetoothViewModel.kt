@@ -92,6 +92,16 @@ class BluetoothViewModel : ViewModel() {
         _isConnected.value = false
     }
 
+    fun loadPairedDevices() {
+        val devices = repository.getPairedDevices()
+        if (devices.isEmpty()) {
+            _connectionError.value = "No hay dispositivos Bluetooth emparejados"
+        } else {
+            _pairedDevices.value = devices
+            _connectionError.value = null
+        }
+    }
+
     fun clearError() {
         _connectionError.value = null
     }

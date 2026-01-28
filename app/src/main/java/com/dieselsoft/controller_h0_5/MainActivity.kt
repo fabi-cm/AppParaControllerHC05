@@ -11,7 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
-import com.dieselsoft.controller_h0_5.features.view.BluetoothScreen
+import com.dieselsoft.controller_h0_5.features.view.NavigationDrawerApp
 import com.dieselsoft.controller_h0_5.features.viewmodel.BluetoothViewModel
 import com.dieselsoft.controller_h0_5.ui.theme.Controllerh05Theme
 
@@ -34,13 +34,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Solicitar permisos de Bluetooth
         requestBluetoothPermissions()
 
         enableEdgeToEdge()
         setContent {
             Controllerh05Theme {
-                BluetoothScreen(viewModel)
+                NavigationDrawerApp(viewModel)
             }
         }
     }
