@@ -2,9 +2,10 @@ package com.dieselsoft.controller_h0_5.features.view
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import com.dieselsoft.controller_h0_5.features.viewmodel.BluetoothViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,18 +15,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.dieselsoft.controller_h0_5.R
+import com.dieselsoft.controller_h0_5.features.viewmodel.BluetoothViewModel
 
 @Composable
 fun BluetoothScreen(viewModel: BluetoothViewModel) {
     val isConnected by viewModel.isConnected.collectAsState()
     val currentValue by viewModel.currentValue.collectAsState()
+    val connectedDeviceName by viewModel.connectedDeviceName.collectAsState()
     var knobValue by remember { mutableFloatStateOf(currentValue.toFloat()) }
 
     LaunchedEffect(currentValue) {
         knobValue = currentValue.toFloat()
     }
 
-    var previousKnobValue by remember { mutableStateOf(knobValue) }
+    var previousKnobValue by remember { mutableFloatStateOf(knobValue) }
     LaunchedEffect(knobValue) {
         val intValue = knobValue.toInt()
         if (intValue != previousKnobValue.toInt() && isConnected) {
@@ -54,44 +57,77 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
-        // Card con mejor visibilidad
+        // Logo de la empresa en la parte superior
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.logo_empresa),
+                contentDescription = "Logo de la empresa",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentScale = ContentScale.Fit
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Card de estado de conexión (compacto)
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .padding(horizontal = 8.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.5f)
+                containerColor = if (isConnected)
+                    Color(0xFF4CAF50).copy(alpha = 0.8f)
+                else
+                    Color(0xFFF44336).copy(alpha = 0.8f)
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 8.dp
             )
         ) {
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = if (isConnected) "Conectado al HC-05 ✅" else "Desconectado ❌",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = Color.White
-                    )
+                Icon(
+                    painter = painterResource(
+                        id = if (isConnected)
+                            R.drawable.outline_bluetooth_connected_24
+                        else
+                            R.drawable.outline_bluetooth_24
+                    ),
+                    contentDescription = if (isConnected) "Conectado" else "Desconectado",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-                Button(
-                    onClick = { viewModel.connect() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White
+                Column {
+                    Text(
+                        text = if (isConnected) "Conectado" else "Desconectado",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
                     )
-                ) {
-                    Text("Conectar")
+                    if (isConnected && connectedDeviceName != null) {
+                        Text(
+                            text = connectedDeviceName!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
                 }
             }
         }
@@ -105,7 +141,7 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                 .padding(horizontal = 8.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.5f)
+                containerColor = Color.White.copy(alpha = 0.9f)
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 8.dp
@@ -118,10 +154,17 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
+                    text = "Control de Velocidad",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
                     text = "Valor: ${knobValue.toInt()}",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = Color.White
-                    ),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
@@ -131,6 +174,18 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                     minValue = 0f,
                     maxValue = 255f
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Indicador visual si no está conectado
+                if (!isConnected) {
+                    Text(
+                        text = "⚠️ Ve a 'Devices' para conectar un dispositivo",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
             }
         }
 
@@ -143,7 +198,7 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                 .padding(horizontal = 8.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.5f)
+                containerColor = Color.White.copy(alpha = 0.9f)
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 8.dp
@@ -161,32 +216,43 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                             viewModel.sendValue(knobValue.toInt())
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(0.8f),
+                    modifier = Modifier.fillMaxWidth(0.9f),
                     enabled = isConnected,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White
+                        contentColor = Color.White,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Enviar",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text ="Enviar Manualmente",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            color = Color.White
-                        )
+                        text = "Enviar Manualmente",
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
 
                 if (isConnected) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    Button(
+                    OutlinedButton(
                         onClick = { viewModel.disconnect() },
-                        modifier = Modifier.fillMaxWidth(0.8f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = Color.White
+                        modifier = Modifier.fillMaxWidth(0.9f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
                         )
                     ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.outline_bluetooth_disabled_24),
+                            contentDescription = "Desconectar",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text("Desconectar")
                     }
                 }

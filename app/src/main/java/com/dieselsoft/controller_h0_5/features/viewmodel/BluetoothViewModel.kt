@@ -24,36 +24,27 @@ class BluetoothViewModel : ViewModel() {
     private val _pairedDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
     val pairedDevices: StateFlow<List<BluetoothDevice>> = _pairedDevices.asStateFlow()
 
-    private val _showDeviceDialog = MutableStateFlow(false)
-    val showDeviceDialog: StateFlow<Boolean> = _showDeviceDialog.asStateFlow()
-
     private val _connectionError = MutableStateFlow<String?>(null)
     val connectionError: StateFlow<String?> = _connectionError.asStateFlow()
 
-    fun openDeviceDialog() {
-        val devices = repository.getPairedDevices()
-        if (devices.isEmpty()) {
-            _connectionError.value = "No hay dispositivos Bluetooth emparejados"
-        } else {
-            _pairedDevices.value = devices
-            _showDeviceDialog.value = true
-        }
-    }
+    private val _connectionSuccess = MutableStateFlow<String?>(null)
+    val connectionSuccess: StateFlow<String?> = _connectionSuccess.asStateFlow()
 
-    fun closeDeviceDialog() {
-        _showDeviceDialog.value = false
-        _connectionError.value = null
-    }
+    private val _connectedDeviceName = MutableStateFlow<String?>(null)
+    val connectedDeviceName: StateFlow<String?> = _connectedDeviceName.asStateFlow()
 
     fun connectToDevice(device: BluetoothDevice) {
         viewModelScope.launch {
-            _showDeviceDialog.value = false
             val success = repository.connectToDevice(device)
             _isConnected.value = success
             if (!success) {
                 _connectionError.value = "Error al conectar con ${device.name}"
+                _connectionSuccess.value = null
+                _connectedDeviceName.value = null
             } else {
                 _connectionError.value = null
+                _connectionSuccess.value = "Conectado exitosamente a ${device.name}"
+                _connectedDeviceName.value = device.name
             }
         }
     }
@@ -75,34 +66,27 @@ class BluetoothViewModel : ViewModel() {
         }
     }
 
-    fun connect() {
-        viewModelScope.launch {
-            val success = repository.connect()
-            _isConnected.value = success
-            if (!success) {
-                _connectionError.value = "Error al conectar con el dispositivo"
-            } else {
-                _connectionError.value = null
-            }
-        }
-    }
-
     fun disconnect() {
         repository.disconnect()
         _isConnected.value = false
+        _connectedDeviceName.value = null
+        _connectionSuccess.value = null
+        _connectionError.value = null
     }
 
     fun loadPairedDevices() {
         val devices = repository.getPairedDevices()
         if (devices.isEmpty()) {
             _connectionError.value = "No hay dispositivos Bluetooth emparejados"
+            _connectionSuccess.value = null
         } else {
             _pairedDevices.value = devices
             _connectionError.value = null
         }
     }
 
-    fun clearError() {
+    fun clearMessages() {
         _connectionError.value = null
+        _connectionSuccess.value = null
     }
 }
