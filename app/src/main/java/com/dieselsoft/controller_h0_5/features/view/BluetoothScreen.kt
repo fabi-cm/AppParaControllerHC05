@@ -4,8 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dieselsoft.controller_h0_5.R
 import com.dieselsoft.controller_h0_5.features.viewmodel.BluetoothViewModel
@@ -59,7 +58,7 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        // Logo de la empresa en la parte superior
+//         Logo de la empresa en la parte superior
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -70,9 +69,10 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                 painter = painterResource(id = R.drawable.logo_empresa),
                 contentDescription = "Logo de la empresa",
                 modifier = Modifier
+//                    .fillMaxSize(),
                     .fillMaxWidth()
                     .height(120.dp),
-                contentScale = ContentScale.Fit
+//                contentScale = ContentScale.Fit
             )
         }
 
@@ -141,7 +141,7 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                 .padding(horizontal = 8.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.9f)
+                containerColor = Color.White.copy(alpha = 0.6f)
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 8.dp
@@ -164,7 +164,7 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                 Text(
                     text = "Valor: ${knobValue.toInt()}",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color.Blue,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
@@ -191,14 +191,14 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Card para los botones de acción
+        // Card para los botones de valores preestablecidos
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .padding(horizontal = 8.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.9f)
+                containerColor = Color.White.copy(alpha = 0.6f)
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 8.dp
@@ -210,39 +210,80 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Button(
-                    onClick = {
-                        if (isConnected) {
-                            viewModel.sendValue(knobValue.toInt())
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(0.9f),
-                    enabled = isConnected,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White,
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Text(
+                    text = "Velocidades Preestablecidas",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                // Primera fila de botones (20, 40, 60)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Enviar",
-                        modifier = Modifier.size(20.dp)
+                    PresetButton(
+                        value = 20,
+                        isConnected = isConnected,
+                        onValueClick = { value ->
+                            knobValue = value.toFloat()
+                            viewModel.sendValue(value)
+                        }
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Enviar Manualmente",
-                        style = MaterialTheme.typography.titleMedium
+
+                    PresetButton(
+                        value = 40,
+                        isConnected = isConnected,
+                        onValueClick = { value ->
+                            knobValue = value.toFloat()
+                            viewModel.sendValue(value)
+                        }
+                    )
+
+                    PresetButton(
+                        value = 60,
+                        isConnected = isConnected,
+                        onValueClick = { value ->
+                            knobValue = value.toFloat()
+                            viewModel.sendValue(value)
+                        }
                     )
                 }
 
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Segunda fila de botones (80, 100)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    PresetButton(
+                        value = 80,
+                        isConnected = isConnected,
+                        onValueClick = { value ->
+                            knobValue = value.toFloat()
+                            viewModel.sendValue(value)
+                        }
+                    )
+
+                    PresetButton(
+                        value = 100,
+                        isConnected = isConnected,
+                        onValueClick = { value ->
+                            knobValue = value.toFloat()
+                            viewModel.sendValue(value)
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 if (isConnected) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     OutlinedButton(
                         onClick = { viewModel.disconnect() },
-                        modifier = Modifier.fillMaxWidth(0.9f),
+                        modifier = Modifier.fillMaxWidth(0.8f),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         )
@@ -258,5 +299,33 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun PresetButton(
+    value: Int,
+    isConnected: Boolean,
+    onValueClick: (Int) -> Unit
+) {
+    Button(
+        onClick = { onValueClick(value) },
+        enabled = isConnected,
+        modifier = Modifier
+            .width(100.dp)
+            .height(50.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = Color.White,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Text(
+            text = value.toString(),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
