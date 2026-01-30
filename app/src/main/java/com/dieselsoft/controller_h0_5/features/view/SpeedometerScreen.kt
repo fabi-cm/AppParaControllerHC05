@@ -4,6 +4,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dieselsoft.controller_h0_5.R
+import kotlin.math.max
 
 /**
  * Pantalla de velocímetro simplificada
@@ -38,6 +41,9 @@ fun SpeedometerScreen() {
         label = "speed_animation"
     )
 
+    // CORRECCIÓN: Asegurar que el valor mostrado nunca sea negativo
+    val displaySpeed = max(0f, animatedSpeed)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -47,7 +53,7 @@ fun SpeedometerScreen() {
     ) {
         // Velocímetro
         SpeedometerGauge(
-            speed = animatedSpeed,
+            speed = displaySpeed,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
@@ -80,7 +86,7 @@ fun SpeedometerScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Control manual con slider
+        // Control manual con slider y botones +/-
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -116,6 +122,89 @@ fun SpeedometerScreen() {
                     valueRange = 0f..120f,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // NUEVO: Botones +/- para ajuste fino
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Botón -10
+                    FilledIconButton(
+                        onClick = {
+                            targetSpeed = (targetSpeed - 10f).coerceIn(0f, 120f)
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_remove_24),
+                                contentDescription = "Restar 10",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "10",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+
+                    // Botón -1
+                    FilledTonalIconButton(
+                        onClick = {
+                            targetSpeed = (targetSpeed - 1f).coerceIn(0f, 120f)
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.outline_remove_24),
+                            contentDescription = "Restar 1",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Botón +1
+                    FilledTonalIconButton(
+                        onClick = {
+                            targetSpeed = (targetSpeed + 1f).coerceIn(0f, 120f)
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Sumar 1",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Botón +10
+                    FilledIconButton(
+                        onClick = {
+                            targetSpeed = (targetSpeed + 10f).coerceIn(0f, 120f)
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Sumar 10",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "10",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -189,18 +278,18 @@ private fun SpeedNeedle(
     modifier: Modifier = Modifier
 ) {
     // Constantes de calibración
-    val START_ANGLE = 245f  // Posición del 0 km/h
-    val END_ANGLE = 115f    // Posición del 120 km/h (equivalente a 475° normalizado)
-    val MAX_SPEED = 120f
-    val NEEDLE_LENGTH_SCALE = 0.65f
+    val startAngle = 245f  // Posición del 0 km/h
+    val endAngle = 115f    // Posición del 120 km/h (equivalente a 475° normalizado)
+    val maxSpeed = 120f
+    val needleLengthScale = 0.65f
 
     Canvas(modifier = modifier) {
         val centerX = size.width / 2f
         val centerY = size.height / 2f
-        val needleLength = (minOf(size.width, size.height) / 2f) * NEEDLE_LENGTH_SCALE
+        val needleLength = (minOf(size.width, size.height) / 2f) * needleLengthScale
 
         // Calcular ángulo de la aguja
-        val needleAngle = calculateNeedleAngle(speed, MAX_SPEED, START_ANGLE, END_ANGLE)
+        val needleAngle = calculateNeedleAngle(speed, maxSpeed, startAngle, endAngle)
 
         // Dibujar la aguja
         rotate(degrees = needleAngle, pivot = Offset(centerX, centerY)) {
