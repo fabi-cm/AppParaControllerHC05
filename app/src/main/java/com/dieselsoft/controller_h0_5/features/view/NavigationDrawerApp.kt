@@ -1,5 +1,6 @@
 package com.dieselsoft.controller_h0_5.features.view
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -8,6 +9,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.painterResource
 import com.dieselsoft.controller_h0_5.R
@@ -41,13 +43,19 @@ fun NavigationDrawerApp(viewModel: BluetoothViewModel) {
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(
-                            text = when (currentScreen) {
-                                "home" -> "Speed Sensor"
-                                "devices" -> "Devices"
-                                else -> "Speed Sensor"
-                            }
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.logo_empresa),
+                                contentDescription = "Logo de la empresa",
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(0.7f),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
                     },
                     navigationIcon = {
                         IconButton(onClick = {

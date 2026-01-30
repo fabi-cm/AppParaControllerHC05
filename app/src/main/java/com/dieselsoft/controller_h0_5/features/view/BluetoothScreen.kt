@@ -58,27 +58,9 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-//         Logo de la empresa en la parte superior
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.logo_empresa),
-                contentDescription = "Logo de la empresa",
-                modifier = Modifier
-//                    .fillMaxSize(),
-                    .fillMaxWidth()
-                    .height(120.dp),
-//                contentScale = ContentScale.Fit
-            )
-        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Card de estado de conexión (compacto)
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
@@ -153,13 +135,13 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Control de Velocidad",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
+//                Text(
+//                    text = "Control de Velocidad",
+//                    style = MaterialTheme.typography.titleLarge,
+//                    color = MaterialTheme.colorScheme.onSurface
+//                )
+//
+//                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = "Valor: ${knobValue.toInt()}",
@@ -210,12 +192,12 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Velocidades Preestablecidas",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
+//                Text(
+//                    text = "Velocidades Preestablecidas",
+//                    style = MaterialTheme.typography.titleMedium,
+//                    color = MaterialTheme.colorScheme.onSurface,
+//                    modifier = Modifier.padding(bottom = 12.dp)
+//                )
 
                 // Primera fila de botones (20, 40, 60)
                 Row(
@@ -226,7 +208,7 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                         value = 20,
                         isConnected = isConnected,
                         onValueClick = { value ->
-                            knobValue = value.toFloat()
+                            knobValue = value.toFloat() + 9
                             viewModel.sendValue(value)
                         }
                     )
@@ -235,7 +217,7 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                         value = 40,
                         isConnected = isConnected,
                         onValueClick = { value ->
-                            knobValue = value.toFloat()
+                            knobValue = value.toFloat() + 17
                             viewModel.sendValue(value)
                         }
                     )
@@ -244,7 +226,7 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                         value = 60,
                         isConnected = isConnected,
                         onValueClick = { value ->
-                            knobValue = value.toFloat()
+                            knobValue = value.toFloat() + 27
                             viewModel.sendValue(value)
                         }
                     )
@@ -261,7 +243,7 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                         value = 80,
                         isConnected = isConnected,
                         onValueClick = { value ->
-                            knobValue = value.toFloat()
+                            knobValue = value.toFloat() + 37
                             viewModel.sendValue(value)
                         }
                     )
@@ -270,13 +252,22 @@ fun BluetoothScreen(viewModel: BluetoothViewModel) {
                         value = 100,
                         isConnected = isConnected,
                         onValueClick = { value ->
-                            knobValue = value.toFloat()
+                            knobValue = value.toFloat() + 46
+                            viewModel.sendValue(value)
+                        }
+                    )
+
+                    PresetButton(
+                        value = 120,
+                        isConnected = isConnected,
+                        onValueClick = { value ->
+                            knobValue = value.toFloat() + 55
                             viewModel.sendValue(value)
                         }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+//                Spacer(modifier = Modifier.height(12.dp))
 
                 if (isConnected) {
                     Spacer(modifier = Modifier.height(16.dp))

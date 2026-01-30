@@ -15,13 +15,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 @Composable
 fun SimpleArcKnob(
@@ -49,20 +52,26 @@ fun SimpleArcKnob(
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { offset ->
-                        isDragging = true
                         val center = Offset(size.width / 2f, size.height / 2f)
-                        val angle = calculateAngle(offset, center)
-                        val newValue = angleToValue(angle, minValue, maxValue)
-                        currentValue = newValue
-                        onValueChange(newValue)
+                        val radius = size.width * 0.4f
+
+                        if (isTouchNearArc(offset, center, radius)) {
+                            isDragging = true
+                            val angle = calculateAngle(offset, center)
+                            val newValue = angleToValue(angle, minValue, maxValue)
+                            currentValue = newValue
+                            onValueChange(newValue)
+                        }
                     },
                     onDrag = { change, _ ->
-                        change.consume()
-                        val center = Offset(size.width / 2f, size.height / 2f)
-                        val angle = calculateAngle(change.position, center)
-                        val newValue = angleToValue(angle, minValue, maxValue)
-                        currentValue = newValue
-                        onValueChange(newValue)
+                        if (isDragging) {
+                            change.consume()
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val angle = calculateAngle(change.position, center)
+                            val newValue = angleToValue(angle, minValue, maxValue)
+                            currentValue = newValue
+                            onValueChange(newValue)
+                        }
                     },
                     onDragEnd = {
                         isDragging = false
@@ -129,30 +138,17 @@ fun SimpleArcKnob(
                 )
             }
 
-            // Cursor
+            // Posición del cursor (camión)
             val cursorAngleRad = Math.toRadians(currentAngle.toDouble())
             val cursorX = centerX + radius * cos(cursorAngleRad).toFloat()
             val cursorY = centerY + radius * sin(cursorAngleRad).toFloat()
 
-            // Sombra del cursor - usa onSurface con transparencia
-            drawCircle(
-                color = onSurfaceColor.copy(alpha = 0.2f),
-                center = Offset(cursorX + 2f, cursorY + 2f),
-                radius = 24f
-            )
-
-            // Cursor exterior - usa onSurface del tema
-            drawCircle(
-                color = onSurfaceColor,
+            // Dibujar el camión
+            drawTruck(
                 center = Offset(cursorX, cursorY),
-                radius = 24f
-            )
-
-            // Cursor interior - usa primary del tema
-            drawCircle(
-                color = primaryColor,
-                center = Offset(cursorX, cursorY),
-                radius = 16f
+                primaryColor = primaryColor,
+                onSurfaceColor = onSurfaceColor,
+                rotationAngle = currentAngle
             )
 
             // Punto central - usa onSurface con transparencia
@@ -163,6 +159,99 @@ fun SimpleArcKnob(
             )
         }
     }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTruck(
+    center: Offset,
+    primaryColor: Color,
+    onSurfaceColor: Color,
+    rotationAngle: Float
+) {
+    rotate(rotationAngle + 90f, center) {
+        val truckWidth = 40f
+        val truckHeight = 28f
+
+        // Sombra del camión
+        drawRect(
+            color = onSurfaceColor.copy(alpha = 0.2f),
+            topLeft = Offset(center.x - truckWidth/2 + 2f, center.y - truckHeight/2 + 2f),
+            size = androidx.compose.ui.geometry.Size(truckWidth * 0.4f, truckHeight)
+        )
+
+        // Cabina
+        drawRect(
+            color = primaryColor,
+            topLeft = Offset(center.x - truckWidth/2, center.y - truckHeight/2),
+            size = androidx.compose.ui.geometry.Size(truckWidth * 0.4f, truckHeight)
+        )
+
+        // Caja del camión
+        drawRect(
+            color = primaryColor.copy(alpha = 0.85f),
+            topLeft = Offset(center.x - truckWidth/2 + truckWidth * 0.4f, center.y - truckHeight/2 + truckHeight * 0.2f),
+            size = androidx.compose.ui.geometry.Size(truckWidth * 0.6f, truckHeight * 0.8f)
+        )
+
+        // Ventana
+        drawRect(
+            color = Color.White.copy(alpha = 0.9f),
+            topLeft = Offset(center.x - truckWidth/2 + 6f, center.y - truckHeight/2 + 5f),
+            size = androidx.compose.ui.geometry.Size(10f, 8f)
+        )
+
+        // Ruedas
+        val wheel1X = center.x - truckWidth/2 + 10f
+        val wheel2X = center.x + truckWidth/2 - 10f
+        val wheelY = center.y + truckHeight/2
+
+        // Rueda trasera
+        drawCircle(
+            color = onSurfaceColor,
+            center = Offset(wheel1X, wheelY),
+            radius = 6f
+        )
+        drawCircle(
+            color = Color.DarkGray,
+            center = Offset(wheel1X, wheelY),
+            radius = 4f
+        )
+
+        // Rueda delantera
+        drawCircle(
+            color = onSurfaceColor,
+            center = Offset(wheel2X, wheelY),
+            radius = 6f
+        )
+        drawCircle(
+            color = Color.DarkGray,
+            center = Offset(wheel2X, wheelY),
+            radius = 4f
+        )
+
+        // Parrilla frontal
+        drawLine(
+            color = onSurfaceColor,
+            start = Offset(center.x + truckWidth/2, center.y - truckHeight/2 + 8f),
+            end = Offset(center.x + truckWidth/2, center.y - truckHeight/2 + 16f),
+            strokeWidth = 2f
+        )
+
+        // Faros
+        drawCircle(
+            color = Color(0xFFFFEB3B),
+            center = Offset(center.x + truckWidth/2 - 2f, center.y - truckHeight/2 + 20f),
+            radius = 2f
+        )
+    }
+}
+
+private fun isTouchNearArc(touch: Offset, center: Offset, radius: Float): Boolean {
+    val dx = touch.x - center.x
+    val dy = touch.y - center.y
+    val distance = sqrt(dx * dx + dy * dy)
+
+    val tolerance = 60f
+    return distance >= (radius - tolerance) && distance <= (radius + tolerance)
 }
 
 private fun calculateAngle(position: Offset, center: Offset): Float {
