@@ -86,6 +86,7 @@ fun NavigationDrawerApp(viewModel: BluetoothViewModel) {
                             currentScreen = "home"
                         }
                     )
+                    "speedometer" -> SpeedometerScreen()
                 }
             }
         }
@@ -147,6 +148,13 @@ fun DrawerContent(
             label = { Text("Devices") },
             selected = currentScreen == "devices",
             onClick = { onScreenSelected("devices") }
+        )
+
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.Build, contentDescription = null) },
+            label = { Text("Speedometer") },
+            selected = currentScreen == "speedometer",
+            onClick = { onScreenSelected("speedometer") }
         )
 
     }
