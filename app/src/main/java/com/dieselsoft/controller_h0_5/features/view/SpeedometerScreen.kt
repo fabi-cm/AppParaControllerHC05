@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -320,21 +322,50 @@ private fun SpeedometerGauge(
             contentScale = ContentScale.Fit
         )
 
+        SpeedDisplay(speed = speed)
+
         SpeedNeedle(
             speed = speed,
             modifier = Modifier.fillMaxSize()
         )
-
-        SpeedDisplay(speed = speed)
     }
 }
 
+//@Composable
+//private fun SpeedDisplay(speed: Float) {
+//    Box(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .offset(y = (-35).dp),
+//        contentAlignment = Alignment.Center
+//    ) {
+//        Column(
+//            horizontalAlignment = Alignment.CenterHorizontally,
+//            verticalArrangement = Arrangement.Center
+//        ) {
+//            Text(
+//                text = "${speed.toInt()}",
+//                style = MaterialTheme.typography.displayLarge.copy(
+//                    fontSize = 60.sp,
+//                    fontWeight = FontWeight.Bold,
+//                    letterSpacing = (-2).sp
+//                ),
+//                color = Color(0xFFc8f0d4)
+//            )
+//        }
+//    }
+//}
+
 @Composable
 private fun SpeedDisplay(speed: Float) {
+    val dotMatrixFontFamily = FontFamily(
+        Font(R.font.doto_extra_bold, FontWeight.Normal)
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .offset(y = (-35).dp),
+            .offset(y = (-30).dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -342,13 +373,14 @@ private fun SpeedDisplay(speed: Float) {
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "${speed.toInt()}",
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 60.sp,
+                text = "DieselSoft",
+                style = LocalTextStyle.current.copy(
+                    fontFamily = dotMatrixFontFamily,
+                    fontSize =  18.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = (-2).sp
-                ),
-                color = Color(0xFFc8f0d4)
+                    letterSpacing = 1.sp,
+                    color = Color(0xFFCECDCD)
+                )
             )
         }
     }

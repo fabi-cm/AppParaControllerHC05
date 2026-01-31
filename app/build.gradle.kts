@@ -14,8 +14,8 @@ android {
         applicationId = "com.dieselsoft.controller_h0_5"
         minSdk = 29
         targetSdk = 36
-        versionCode = 6
-        versionName = "5.1.2"
+        versionCode = 7
+        versionName = "5.2.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
