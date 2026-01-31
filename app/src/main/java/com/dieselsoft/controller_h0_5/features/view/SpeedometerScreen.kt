@@ -44,18 +44,47 @@ private val SPEED_MAP = listOf(
 private fun speedToPotenValue(speedKmh: Float): Int {
     val clamped = speedKmh.coerceIn(0f, 120f)
 
-    // Encontrar los dos puntos entre los que cae la velocidad
     for (i in 0 until SPEED_MAP.size - 1) {
         val (lowSpeed, lowPoten) = SPEED_MAP[i]
         val (highSpeed, highPoten) = SPEED_MAP[i + 1]
 
         if (clamped <= highSpeed) {
-            // Interpolación lineal entre los dos puntos
             val ratio = (clamped - lowSpeed) / (highSpeed - lowSpeed).toFloat()
             return round(lowPoten + ratio * (highPoten - lowPoten)).toInt()
         }
     }
-    return 175 // Valor máximo si por alguna razón supera 120
+    return 175
+}
+
+/**
+ * Calcula el ángulo de la aguja adaptado a la nueva imagen.
+ *
+ * Nueva imagen:
+ * - El arco físico va de ~225° (donde está el 20) hasta ~135° (donde está el 120)
+ * - El centro del arco es el 70 km/h (no 60)
+ * - De 0 a 18 km/h la aguja se mantiene en la posición del 20 (inicio del arco)
+ * - De 18 a 120 la aguja se distribuye en todo el recorrido del arco
+ */
+private fun calculateNeedleAngle(speed: Float): Float {
+    val startAngle = 250f   // Posición física del 20 en la imagen (inicio del arco)
+    val endAngle   = 106f   // Posición física del 120 en la imagen (final del arco)
+    // Recorrido total cruza el 0°/360°: de 228° → 360° + 0° → 132° = 264°
+    val sweepAngle = (360f - startAngle) + endAngle
+
+    // De 0 a 18: la aguja se queda fija en el inicio (posición del 20)
+    if (speed <= 18f) {
+        // Pequeño movimiento proporcional de 0 a 18 para que no esté 100% fija
+        // Solo recorre el 3% del arco total (se mueve apenas)
+        val microRatio = speed / 18f * 0.03f
+        val angle = startAngle + (microRatio * sweepAngle)
+        return if (angle >= 360f) angle - 360f else angle
+    }
+
+    // De 18 a 120: distribuir en todo el arco
+    // El 18 mapea al inicio (0%) y el 120 mapea al final (100%)
+    val ratio = ((speed - 18f) / (120f - 18f)).coerceIn(0f, 1f)
+    val angle = startAngle + (ratio * sweepAngle)
+    return if (angle >= 360f) angle - 360f else angle
 }
 
 /**
@@ -64,19 +93,13 @@ private fun speedToPotenValue(speedKmh: Float): Int {
  * - Muestra velocidad en km/h (0-120)
  * - Envía valor del potenciómetro (0-175) al módulo Bluetooth
  * - Funciona en modo local sin necesidad de conexión
- *
- * Calibración de la aguja:
- * - 0 km/h en 245°
- * - 120 km/h en 115°
  */
 @Composable
 fun SpeedometerScreen(viewModel: BluetoothViewModel) {
     val isConnected by viewModel.isConnected.collectAsState()
 
-    // Estado local de velocidad en km/h (siempre funciona)
     var targetSpeed by remember { mutableFloatStateOf(0f) }
 
-    // Animación suave
     val animatedSpeed by animateFloatAsState(
         targetValue = targetSpeed,
         animationSpec = spring(
@@ -86,10 +109,8 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
         label = "speed_animation"
     )
 
-    // Nunca negativo en el display
     val displaySpeed = max(0f, animatedSpeed)
 
-    // Enviar al módulo solo cuando cambie y esté conectado
     LaunchedEffect(targetSpeed) {
         if (isConnected) {
             val potenValue = speedToPotenValue(targetSpeed)
@@ -158,7 +179,6 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    // Muestra km/h y entre paréntesis el valor real que se envía
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "${targetSpeed.toInt()} km/h",
@@ -260,7 +280,7 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
                     }
                 }
 
-                // Indicador de estado de conexión (pequeño, no invasivo)
+                // Indicador de estado
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -294,7 +314,6 @@ private fun SpeedometerGauge(
         contentAlignment = Alignment.Center
     ) {
         Image(
-//            painter = painterResource(id = R.drawable.dashboar),
             painter = painterResource(id = R.drawable.velocimetro),
             contentDescription = "Velocímetro",
             modifier = Modifier.fillMaxSize(),
@@ -331,15 +350,6 @@ private fun SpeedDisplay(speed: Float) {
                 ),
                 color = Color(0xFFc8f0d4)
             )
-//            Text(
-//                text = "km/h",
-//                style = MaterialTheme.typography.titleMedium.copy(
-//                    fontSize = 18.sp,
-//                    fontWeight = FontWeight.Medium,
-//                    letterSpacing = 1.sp
-//                ),
-//                color = Color(0xFFc8f0d4).copy(alpha = 0.8f)
-//            )
         }
     }
 }
@@ -349,17 +359,12 @@ private fun SpeedNeedle(
     speed: Float,
     modifier: Modifier = Modifier
 ) {
-    val startAngle = 245f
-    val endAngle = 115f
-    val maxSpeed = 120f
-    val needleLengthScale = 0.65f
-
     Canvas(modifier = modifier) {
         val centerX = size.width / 2f
         val centerY = size.height / 2f
-        val needleLength = (minOf(size.width, size.height) / 2f) * needleLengthScale
+        val needleLength = (minOf(size.width, size.height) / 2f) * 0.65f
 
-        val needleAngle = calculateNeedleAngle(speed, maxSpeed, startAngle, endAngle)
+        val needleAngle = calculateNeedleAngle(speed)
 
         rotate(degrees = needleAngle, pivot = Offset(centerX, centerY)) {
             drawNeedle(centerX, centerY, needleLength)
@@ -401,16 +406,4 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCenterCircles(
     drawCircle(color = Color(0xFF3a3a3a), radius = 25f, center = Offset(centerX, centerY))
     drawCircle(color = Color(0xFFff3838), radius = 15f, center = Offset(centerX, centerY))
     drawCircle(color = Color(0xFF1a1a1a), radius = 5f, center = Offset(centerX, centerY))
-}
-
-private fun calculateNeedleAngle(
-    speed: Float,
-    maxSpeed: Float,
-    startAngle: Float,
-    endAngle: Float
-): Float {
-    val speedPercentage = (speed / maxSpeed).coerceIn(0f, 1f)
-    val sweepAngle = (360f - startAngle) + endAngle
-    val finalAngle = startAngle + (speedPercentage * sweepAngle)
-    return if (finalAngle >= 360f) finalAngle - 360f else finalAngle
 }
