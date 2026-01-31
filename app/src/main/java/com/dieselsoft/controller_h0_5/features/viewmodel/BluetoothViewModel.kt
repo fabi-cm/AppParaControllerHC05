@@ -33,6 +33,12 @@ class BluetoothViewModel : ViewModel() {
     private val _connectedDeviceName = MutableStateFlow<String?>(null)
     val connectedDeviceName: StateFlow<String?> = _connectedDeviceName.asStateFlow()
 
+    // NUEVO: guarda el último dispositivo para reconectar rápido
+    private var lastConnectedDevice: BluetoothDevice? = null
+
+    private val _lastDeviceName = MutableStateFlow<String?>(null)
+    val lastDeviceName: StateFlow<String?> = _lastDeviceName.asStateFlow()
+
     fun connectToDevice(device: BluetoothDevice) {
         viewModelScope.launch {
             val success = repository.connectToDevice(device)
@@ -45,8 +51,18 @@ class BluetoothViewModel : ViewModel() {
                 _connectionError.value = null
                 _connectionSuccess.value = "Conectado exitosamente a ${device.name}"
                 _connectedDeviceName.value = device.name
+                // NUEVO: guardar referencia al último dispositivo
+                lastConnectedDevice = device
+                _lastDeviceName.value = device.name
             }
         }
+    }
+
+    /** Reconecta al último dispositivo usado, retorna false si no hay ninguno */
+    fun reconnectLastDevice(): Boolean {
+        val device = lastConnectedDevice ?: return false
+        connectToDevice(device)
+        return true
     }
 
     fun updateAndSendValue(value: Int) {
@@ -72,6 +88,7 @@ class BluetoothViewModel : ViewModel() {
         _connectedDeviceName.value = null
         _connectionSuccess.value = null
         _connectionError.value = null
+        // NO limpiamos lastConnectedDevice ni _lastDeviceName para poder reconectar
     }
 
     fun loadPairedDevices() {

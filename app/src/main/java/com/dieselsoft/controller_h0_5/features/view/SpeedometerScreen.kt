@@ -20,18 +20,63 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dieselsoft.controller_h0_5.R
+import com.dieselsoft.controller_h0_5.features.viewmodel.BluetoothViewModel
 import kotlin.math.max
+import kotlin.math.round
+
+// ─────────────────────────────────────────────
+// Tabla de mapeo: km/h → valor del potenciómetro
+// ─────────────────────────────────────────────
+private val SPEED_MAP = listOf(
+    0   to 0,
+    20  to 29,
+    40  to 57,
+    60  to 87,
+    80  to 117,
+    100 to 146,
+    120 to 175
+)
 
 /**
- * Pantalla de velocímetro simplificada
+ * Convierte km/h (0-120) al valor del potenciómetro (0-175)
+ * Hace interpolación lineal entre los puntos conocidos
+ */
+private fun speedToPotenValue(speedKmh: Float): Int {
+    val clamped = speedKmh.coerceIn(0f, 120f)
+
+    // Encontrar los dos puntos entre los que cae la velocidad
+    for (i in 0 until SPEED_MAP.size - 1) {
+        val (lowSpeed, lowPoten) = SPEED_MAP[i]
+        val (highSpeed, highPoten) = SPEED_MAP[i + 1]
+
+        if (clamped <= highSpeed) {
+            // Interpolación lineal entre los dos puntos
+            val ratio = (clamped - lowSpeed) / (highSpeed - lowSpeed).toFloat()
+            return round(lowPoten + ratio * (highPoten - lowPoten)).toInt()
+        }
+    }
+    return 175 // Valor máximo si por alguna razón supera 120
+}
+
+/**
+ * Pantalla de velocímetro
  *
- * Calibración actual:
- * - 0 km/h en 245° (abajo-izquierda)
- * - 120 km/h en 115° (normalizado de 475°, arriba-derecha)
+ * - Muestra velocidad en km/h (0-120)
+ * - Envía valor del potenciómetro (0-175) al módulo Bluetooth
+ * - Funciona en modo local sin necesidad de conexión
+ *
+ * Calibración de la aguja:
+ * - 0 km/h en 245°
+ * - 120 km/h en 115°
  */
 @Composable
-fun SpeedometerScreen() {
+fun SpeedometerScreen(viewModel: BluetoothViewModel) {
+    val isConnected by viewModel.isConnected.collectAsState()
+
+    // Estado local de velocidad en km/h (siempre funciona)
     var targetSpeed by remember { mutableFloatStateOf(0f) }
+
+    // Animación suave
     val animatedSpeed by animateFloatAsState(
         targetValue = targetSpeed,
         animationSpec = spring(
@@ -41,8 +86,16 @@ fun SpeedometerScreen() {
         label = "speed_animation"
     )
 
-    // CORRECCIÓN: Asegurar que el valor mostrado nunca sea negativo
+    // Nunca negativo en el display
     val displaySpeed = max(0f, animatedSpeed)
+
+    // Enviar al módulo solo cuando cambie y esté conectado
+    LaunchedEffect(targetSpeed) {
+        if (isConnected) {
+            val potenValue = speedToPotenValue(targetSpeed)
+            viewModel.sendValue(potenValue)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -86,7 +139,7 @@ fun SpeedometerScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Control manual con slider y botones +/-
+        // Control manual
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -105,13 +158,22 @@ fun SpeedometerScreen() {
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
-                        text = "${targetSpeed.toInt()} km/h",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    // Muestra km/h y entre paréntesis el valor real que se envía
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${targetSpeed.toInt()} km/h",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "[${speedToPotenValue(targetSpeed)}]",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -125,22 +187,19 @@ fun SpeedometerScreen() {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // NUEVO: Botones +/- para ajuste fino
+                // Botones +/-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Botón -10
                     FilledIconButton(
                         onClick = {
                             targetSpeed = (targetSpeed - 10f).coerceIn(0f, 120f)
                         },
                         modifier = Modifier.size(48.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 painter = painterResource(R.drawable.outline_remove_24),
                                 contentDescription = "Restar 10",
@@ -154,7 +213,6 @@ fun SpeedometerScreen() {
                         }
                     }
 
-                    // Botón -1
                     FilledTonalIconButton(
                         onClick = {
                             targetSpeed = (targetSpeed - 1f).coerceIn(0f, 120f)
@@ -168,7 +226,6 @@ fun SpeedometerScreen() {
                         )
                     }
 
-                    // Botón +1
                     FilledTonalIconButton(
                         onClick = {
                             targetSpeed = (targetSpeed + 1f).coerceIn(0f, 120f)
@@ -182,16 +239,13 @@ fun SpeedometerScreen() {
                         )
                     }
 
-                    // Botón +10
                     FilledIconButton(
                         onClick = {
                             targetSpeed = (targetSpeed + 10f).coerceIn(0f, 120f)
                         },
                         modifier = Modifier.size(48.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "Sumar 10",
@@ -204,6 +258,26 @@ fun SpeedometerScreen() {
                             )
                         }
                     }
+                }
+
+                // Indicador de estado de conexión (pequeño, no invasivo)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val dotColor = if (isConnected) Color(0xFF4CAF50) else Color(0xFF9E9E9E)
+                    Canvas(modifier = Modifier.size(8.dp)) {
+                        drawCircle(color = dotColor, radius = size.width / 2f)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isConnected) "Conectado — enviando al módulo"
+                        else "Sin conexión — modo local",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
                 }
             }
         }
@@ -219,21 +293,19 @@ private fun SpeedometerGauge(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        // Imagen de fondo del velocímetro
         Image(
-            painter = painterResource(id = R.drawable.dashboar),
+//            painter = painterResource(id = R.drawable.dashboar),
+            painter = painterResource(id = R.drawable.velocimetro),
             contentDescription = "Velocímetro",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
 
-        // Aguja
         SpeedNeedle(
             speed = speed,
             modifier = Modifier.fillMaxSize()
         )
 
-        // Valor numérico de velocidad
         SpeedDisplay(speed = speed)
     }
 }
@@ -243,7 +315,7 @@ private fun SpeedDisplay(speed: Float) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .offset(y = (-20).dp),
+            .offset(y = (-35).dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -253,21 +325,21 @@ private fun SpeedDisplay(speed: Float) {
             Text(
                 text = "${speed.toInt()}",
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 64.sp,
+                    fontSize = 60.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-2).sp
                 ),
                 color = Color(0xFFc8f0d4)
             )
-            Text(
-                text = "km/h",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.sp
-                ),
-                color = Color(0xFFc8f0d4).copy(alpha = 0.8f)
-            )
+//            Text(
+//                text = "km/h",
+//                style = MaterialTheme.typography.titleMedium.copy(
+//                    fontSize = 18.sp,
+//                    fontWeight = FontWeight.Medium,
+//                    letterSpacing = 1.sp
+//                ),
+//                color = Color(0xFFc8f0d4).copy(alpha = 0.8f)
+//            )
         }
     }
 }
@@ -277,9 +349,8 @@ private fun SpeedNeedle(
     speed: Float,
     modifier: Modifier = Modifier
 ) {
-    // Constantes de calibración
-    val startAngle = 245f  // Posición del 0 km/h
-    val endAngle = 115f    // Posición del 120 km/h (equivalente a 475° normalizado)
+    val startAngle = 245f
+    val endAngle = 115f
     val maxSpeed = 120f
     val needleLengthScale = 0.65f
 
@@ -288,15 +359,12 @@ private fun SpeedNeedle(
         val centerY = size.height / 2f
         val needleLength = (minOf(size.width, size.height) / 2f) * needleLengthScale
 
-        // Calcular ángulo de la aguja
         val needleAngle = calculateNeedleAngle(speed, maxSpeed, startAngle, endAngle)
 
-        // Dibujar la aguja
         rotate(degrees = needleAngle, pivot = Offset(centerX, centerY)) {
             drawNeedle(centerX, centerY, needleLength)
         }
 
-        // Círculo central
         drawCenterCircles(centerX, centerY)
     }
 }
@@ -310,70 +378,31 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNeedle(
     val needleBaseWidth = 12f
 
     val needlePath = Path().apply {
-        // Forma de flecha de la aguja
         moveTo(centerX - needleBaseWidth, centerY)
         lineTo(centerX - needleWidth / 2, centerY - length * 0.15f)
         lineTo(centerX, centerY - length)
         lineTo(centerX + needleWidth / 2, centerY - length * 0.15f)
         lineTo(centerX + needleBaseWidth, centerY)
-
-        // Cola de la aguja
         lineTo(centerX + needleBaseWidth / 2, centerY)
         lineTo(centerX + needleBaseWidth / 2, centerY + 15f)
         lineTo(centerX - needleBaseWidth / 2, centerY + 15f)
         lineTo(centerX - needleBaseWidth / 2, centerY)
-
         close()
     }
 
-    // Sombra
-    drawPath(
-        path = needlePath,
-        color = Color.Black.copy(alpha = 0.3f)
-    )
-
-    // Aguja roja
-    drawPath(
-        path = needlePath,
-        color = Color(0xFFff3838)
-    )
+    drawPath(path = needlePath, color = Color.Black.copy(alpha = 0.3f))
+    drawPath(path = needlePath, color = Color(0xFFff3838))
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCenterCircles(
     centerX: Float,
     centerY: Float
 ) {
-    // Base gris oscura
-    drawCircle(
-        color = Color(0xFF3a3a3a),
-        radius = 25f,
-        center = Offset(centerX, centerY)
-    )
-
-    // Círculo rojo
-    drawCircle(
-        color = Color(0xFFff3838),
-        radius = 15f,
-        center = Offset(centerX, centerY)
-    )
-
-    // Punto central
-    drawCircle(
-        color = Color(0xFF1a1a1a),
-        radius = 5f,
-        center = Offset(centerX, centerY)
-    )
+    drawCircle(color = Color(0xFF3a3a3a), radius = 25f, center = Offset(centerX, centerY))
+    drawCircle(color = Color(0xFFff3838), radius = 15f, center = Offset(centerX, centerY))
+    drawCircle(color = Color(0xFF1a1a1a), radius = 5f, center = Offset(centerX, centerY))
 }
 
-/**
- * Calcula el ángulo de la aguja basándose en la velocidad
- *
- * @param speed Velocidad actual (0-120 km/h)
- * @param maxSpeed Velocidad máxima (120 km/h)
- * @param startAngle Ángulo donde está el 0 (245°)
- * @param endAngle Ángulo donde está el 120 (115°, que es 475° normalizado)
- * @return Ángulo en grados para la aguja
- */
 private fun calculateNeedleAngle(
     speed: Float,
     maxSpeed: Float,
@@ -381,15 +410,7 @@ private fun calculateNeedleAngle(
     endAngle: Float
 ): Float {
     val speedPercentage = (speed / maxSpeed).coerceIn(0f, 1f)
-
-    // Como endAngle (115°) es menor que startAngle (245°),
-    // el arco cruza el punto 0°/360°
-    // Recorrido total: desde 245° hasta 360° + desde 0° hasta 115° = 230°
     val sweepAngle = (360f - startAngle) + endAngle
-
-    // Calcular ángulo final
     val finalAngle = startAngle + (speedPercentage * sweepAngle)
-
-    // Normalizar a rango 0-360°
     return if (finalAngle >= 360f) finalAngle - 360f else finalAngle
 }

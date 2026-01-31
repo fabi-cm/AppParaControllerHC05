@@ -1,6 +1,8 @@
 package com.dieselsoft.controller_h0_5.features.view
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -9,6 +11,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.painterResource
@@ -22,6 +25,10 @@ fun NavigationDrawerApp(viewModel: BluetoothViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var currentScreen by remember { mutableStateOf("home") }
+
+    val isConnected by viewModel.isConnected.collectAsState()
+    val connectedDeviceName by viewModel.connectedDeviceName.collectAsState()
+    val lastDeviceName by viewModel.lastDeviceName.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -75,19 +82,134 @@ fun NavigationDrawerApp(viewModel: BluetoothViewModel) {
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 )
-            }
+            },
+            // NUEVO: Barra de conexión Bluetooth abajo del TopBar
+//            contentWindowInsets = WindowInsets.None
         ) { paddingValues ->
-            Box(modifier = Modifier.padding(paddingValues)) {
-                when (currentScreen) {
-                    "home" -> BluetoothScreen(viewModel)
-                    "devices" -> DevicesScreen(
-                        viewModel = viewModel,
-                        onDeviceConnected = {
-                            currentScreen = "home"
+            Column(modifier = Modifier.padding(paddingValues)) {
+
+                // ─── Strip de conexión Bluetooth ───
+                BluetoothConnectionStrip(
+                    isConnected = isConnected,
+                    connectedDeviceName = connectedDeviceName,
+                    lastDeviceName = lastDeviceName,
+                    onDisconnect = { viewModel.disconnect() },
+                    onReconnect = {
+                        if (!viewModel.reconnectLastDevice()) {
+                            // Si no hay dispositivo previo, navegar a Devices
+                            currentScreen = "devices"
                         }
-                    )
-                    "speedometer" -> SpeedometerScreen()
+                    },
+                    onGoToDevices = { currentScreen = "devices" }
+                )
+
+                // ─── Contenido de la pantalla ───
+                Box(modifier = Modifier.weight(1f)) {
+                    when (currentScreen) {
+                        "home" -> SpeedometerScreen(viewModel)
+                        "devices" -> DevicesScreen(
+                            viewModel = viewModel,
+                            onDeviceConnected = {
+                                currentScreen = "home"
+                            }
+                        )
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BluetoothConnectionStrip(
+    isConnected: Boolean,
+    connectedDeviceName: String?,
+    lastDeviceName: String?,
+    onDisconnect: () -> Unit,
+    onReconnect: () -> Unit,
+    onGoToDevices: () -> Unit
+) {
+    val bgColor = if (isConnected) Color(0xFF1B5E20) else Color(0xFF212121)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(bgColor)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Dot de estado
+        Canvas(modifier = Modifier.size(10.dp)) {
+            drawCircle(
+                color = if (isConnected) Color(0xFF4CAF50) else Color(0xFF616161),
+                radius = size.width / 2f
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        // Icono bluetooth
+        Icon(
+            painter = painterResource(
+                id = if (isConnected)
+                    R.drawable.outline_bluetooth_connected_24
+                else
+                    R.drawable.outline_bluetooth_24
+            ),
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.8f),
+            modifier = Modifier.size(18.dp)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Texto de estado
+        Text(
+            text = if (isConnected) {
+                connectedDeviceName ?: "Conectado"
+            } else {
+                if (lastDeviceName != null) "Desconectado · $lastDeviceName"
+                else "Sin dispositivo"
+            },
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White.copy(alpha = 0.85f),
+            modifier = Modifier.weight(1f)
+        )
+
+        // Botón de acción
+        if (isConnected) {
+            // Conectado → mostrar botón de desconectar
+            IconButton(
+                onClick = onDisconnect,
+                modifier = Modifier.size(32.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = Color.White.copy(alpha = 0.7f)
+                )
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.outline_bluetooth_disabled_24),
+                    contentDescription = "Desconectar",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        } else {
+            // Desconectado → mostrar botón de reconectar o ir a devices
+            IconButton(
+                onClick = {
+                    if (lastDeviceName != null) onReconnect()
+                    else onGoToDevices()
+                },
+                modifier = Modifier.size(32.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = Color(0xFF81C784)
+                )
+            ) {
+                Icon(
+                    imageVector = if (lastDeviceName != null) Icons.Default.Refresh
+                    else Icons.Default.Add,
+                    contentDescription = if (lastDeviceName != null) "Reconectar" else "Agregar dispositivo",
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -103,7 +225,6 @@ fun DrawerContent(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Header del drawer
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -130,7 +251,6 @@ fun DrawerContent(
             color = DividerDefaults.color
         )
 
-        // Opciones del menú
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.Home, contentDescription = null) },
             label = { Text("Home") },
@@ -149,13 +269,5 @@ fun DrawerContent(
             selected = currentScreen == "devices",
             onClick = { onScreenSelected("devices") }
         )
-
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Default.Build, contentDescription = null) },
-            label = { Text("Speedometer") },
-            selected = currentScreen == "speedometer",
-            onClick = { onScreenSelected("speedometer") }
-        )
-
     }
 }
