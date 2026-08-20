@@ -6,12 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.dieselsoft.controller_h0_5.data.BluetoothRepository
 import com.dieselsoft.controller_h0_5.domain.SendBluetoothValueUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class BluetoothViewModel : ViewModel() {
-
     private val repository = BluetoothRepository()
     private val sendValueUseCase = SendBluetoothValueUseCase(repository)
 
@@ -19,46 +17,53 @@ class BluetoothViewModel : ViewModel() {
     val isConnected = _isConnected.asStateFlow()
 
     private val _currentValue = MutableStateFlow(0)
-    val currentValue: StateFlow<Int> = _currentValue.asStateFlow()
+    val currentValue = _currentValue.asStateFlow()
 
     private val _pairedDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
-    val pairedDevices: StateFlow<List<BluetoothDevice>> = _pairedDevices.asStateFlow()
+    val pairedDevices = _pairedDevices.asStateFlow()
 
     private val _connectionError = MutableStateFlow<String?>(null)
-    val connectionError: StateFlow<String?> = _connectionError.asStateFlow()
+    val connectionError = _connectionError.asStateFlow()
 
     private val _connectionSuccess = MutableStateFlow<String?>(null)
-    val connectionSuccess: StateFlow<String?> = _connectionSuccess.asStateFlow()
+    val connectionSuccess = _connectionSuccess.asStateFlow()
 
     private val _connectedDeviceName = MutableStateFlow<String?>(null)
-    val connectedDeviceName: StateFlow<String?> = _connectedDeviceName.asStateFlow()
+    val connectedDeviceName = _connectedDeviceName.asStateFlow()
 
-    // NUEVO: guarda el último dispositivo para reconectar rápido
+    private val _simulationMode = MutableStateFlow(false)
+    val simulationMode = _simulationMode.asStateFlow()
+
     private var lastConnectedDevice: BluetoothDevice? = null
-
     private val _lastDeviceName = MutableStateFlow<String?>(null)
-    val lastDeviceName: StateFlow<String?> = _lastDeviceName.asStateFlow()
+    val lastDeviceName = _lastDeviceName.asStateFlow()
+
+    fun checkBluetoothAvailability() {
+        if (!repository.isBluetoothAvailable()) {
+            _connectionError.value = "Bluetooth desactivado"
+        }
+        loadPairedDevices()
+    }
+
+    fun enableSimulationMode() { _simulationMode.value = true }
+    fun disableSimulationMode() { _simulationMode.value = false }
 
     fun connectToDevice(device: BluetoothDevice) {
         viewModelScope.launch {
+            _connectionError.value = null
             val success = repository.connectToDevice(device)
             _isConnected.value = success
-            if (!success) {
-                _connectionError.value = "Error al conectar con ${device.name}"
-                _connectionSuccess.value = null
-                _connectedDeviceName.value = null
-            } else {
-                _connectionError.value = null
-                _connectionSuccess.value = "Conectado exitosamente a ${device.name}"
+            if (success) {
+                _connectionSuccess.value = "Conectado a ${device.name}"
                 _connectedDeviceName.value = device.name
-                // NUEVO: guardar referencia al último dispositivo
                 lastConnectedDevice = device
                 _lastDeviceName.value = device.name
+            } else {
+                _connectionError.value = "Error al conectar"
             }
         }
     }
 
-    /** Reconecta al último dispositivo usado, retorna false si no hay ninguno */
     fun reconnectLastDevice(): Boolean {
         val device = lastConnectedDevice ?: return false
         connectToDevice(device)
@@ -68,7 +73,7 @@ class BluetoothViewModel : ViewModel() {
     fun updateAndSendValue(value: Int) {
         viewModelScope.launch {
             _currentValue.value = value
-            if (_isConnected.value) {
+            if (_isConnected.value || _simulationMode.value) {
                 sendValueUseCase.execute(value)
             }
         }
@@ -76,7 +81,7 @@ class BluetoothViewModel : ViewModel() {
 
     fun sendValue(value: Int) {
         viewModelScope.launch {
-            if (_isConnected.value) {
+            if (_isConnected.value || _simulationMode.value) {
                 sendValueUseCase.execute(value)
             }
         }
@@ -87,19 +92,10 @@ class BluetoothViewModel : ViewModel() {
         _isConnected.value = false
         _connectedDeviceName.value = null
         _connectionSuccess.value = null
-        _connectionError.value = null
-        // NO limpiamos lastConnectedDevice ni _lastDeviceName para poder reconectar
     }
 
     fun loadPairedDevices() {
-        val devices = repository.getPairedDevices()
-        if (devices.isEmpty()) {
-            _connectionError.value = "No hay dispositivos Bluetooth emparejados"
-            _connectionSuccess.value = null
-        } else {
-            _pairedDevices.value = devices
-            _connectionError.value = null
-        }
+        _pairedDevices.value = repository.getPairedDevices()
     }
 
     fun clearMessages() {
