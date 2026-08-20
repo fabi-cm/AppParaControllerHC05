@@ -3,28 +3,31 @@ package com.dieselsoft.controller_h0_5
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.runtime.LaunchedEffect
-import com.dieselsoft.controller_h0_5.features.view.BluetoothScreen
+import androidx.core.content.ContextCompat
+import com.dieselsoft.controller_h0_5.features.view.NavigationDrawerApp
 import com.dieselsoft.controller_h0_5.features.viewmodel.BluetoothViewModel
 import com.dieselsoft.controller_h0_5.ui.theme.Controllerh05Theme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: BluetoothViewModel by viewModels()
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val allGranted = permissions.values.all { it }
+        val allGranted = permissions.entries.all { it.value }
         if (allGranted) {
             viewModel.checkBluetoothAvailability()
         } else {
-            viewModel.setError("Permisos de Bluetooth denegados")
+            Toast.makeText(this, "Se necesitan permisos de Bluetooth", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -33,26 +36,17 @@ class MainActivity : ComponentActivity() {
     ) { result ->
         if (result.resultCode == RESULT_OK) {
             viewModel.checkBluetoothAvailability()
-        } else {
-            viewModel.setError("Bluetooth debe estar activado")
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestBluetoothPermissions()
         enableEdgeToEdge()
 
         setContent {
             Controllerh05Theme {
-                LaunchedEffect(Unit) {
-                    viewModel.checkBluetoothAvailability()
-                }
-
-                BluetoothScreen(
-                    viewModel = viewModel,
-                    onRequestPermissions = { requestBluetoothPermissions() },
-                    onEnableBluetooth = { enableBluetooth() }
-                )
+                NavigationDrawerApp(viewModel)
             }
         }
     }
@@ -62,30 +56,34 @@ class MainActivity : ComponentActivity() {
             arrayOf(
                 Manifest.permission.BLUETOOTH_CONNECT,
                 Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
             )
         } else {
             arrayOf(
                 Manifest.permission.BLUETOOTH,
                 Manifest.permission.BLUETOOTH_ADMIN,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
             )
         }
-        requestPermissionLauncher.launch(permissions)
+
+        val needsPermission = permissions.any {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (needsPermission) {
+            requestPermissionLauncher.launch(permissions)
+        } else {
+            viewModel.checkBluetoothAvailability()
+        }
     }
 
     private fun enableBluetooth() {
         val adapter = BluetoothAdapter.getDefaultAdapter()
-        if (adapter == null) {
-            viewModel.setError("Este dispositivo no soporta Bluetooth")
-            return
-        }
-
-        if (!adapter.isEnabled) {
+        if (adapter != null && !adapter.isEnabled) {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             enableBluetoothLauncher.launch(enableBtIntent)
-        } else {
-            viewModel.checkBluetoothAvailability()
         }
     }
 }
