@@ -31,16 +31,16 @@ import kotlin.math.round
 // ─────────────────────────────────────────────
 private val SPEED_MAP = listOf(
     0   to 0,
-    20  to 29,
-    40  to 57,
-    60  to 87,
-    80  to 117,
-    100 to 146,
-    120 to 175
+    20  to 39,
+    30  to 58,
+    40  to 78,
+    60  to 117,
+    90  to 174,
+    120 to 232
 )
 
 /**
- * Convierte km/h (0-120) al valor del potenciómetro (0-175)
+ * Convierte km/h (0-120) al valor del potenciómetro (0-232)
  * Hace interpolación lineal entre los puntos conocidos
  */
 private fun speedToPotenValue(speedKmh: Float): Int {
@@ -55,7 +55,7 @@ private fun speedToPotenValue(speedKmh: Float): Int {
             return round(lowPoten + ratio * (highPoten - lowPoten)).toInt()
         }
     }
-    return 175
+    return 232
 }
 
 /**
@@ -93,7 +93,7 @@ private fun calculateNeedleAngle(speed: Float): Float {
  * Pantalla de velocímetro
  *
  * - Muestra velocidad en km/h (0-120)
- * - Envía valor del potenciómetro (0-175) al módulo Bluetooth
+ * - Envía valor del potenciómetro (0-232) al módulo Bluetooth
  * - Funciona en modo local sin necesidad de conexión
  */
 @Composable

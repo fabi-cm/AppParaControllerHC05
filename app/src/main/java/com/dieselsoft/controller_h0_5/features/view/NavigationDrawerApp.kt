@@ -48,21 +48,17 @@ fun NavigationDrawerApp(viewModel: BluetoothViewModel) {
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
+                CenterAlignedTopAppBar(
                     title = {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.logo_empresa),
-                                contentDescription = "Logo de la empresa",
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(0.7f),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_empresa3),
+                            contentDescription = "Logo de la empresa",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            contentScale = ContentScale.Fit
+                        )
                     },
                     navigationIcon = {
                         IconButton(onClick = {
@@ -76,7 +72,11 @@ fun NavigationDrawerApp(viewModel: BluetoothViewModel) {
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
+                    actions = {
+                        // Spacer para equilibrar el icono de navegación y que el logo quede centrado
+                        Spacer(modifier = Modifier.width(48.dp))
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary,
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
