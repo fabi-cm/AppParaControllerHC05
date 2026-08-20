@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         requestBluetoothPermissions()
         enableEdgeToEdge()
+
         setContent {
             Controllerh05Theme {
                 NavigationDrawerApp(viewModel)

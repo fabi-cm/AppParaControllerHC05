@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,7 +23,11 @@ import com.dieselsoft.controller_h0_5.features.viewmodel.BluetoothViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BluetoothScreen(viewModel: BluetoothViewModel) {
+fun BluetoothScreen(
+    viewModel: BluetoothViewModel,
+    onRequestPermissions: () -> Unit = {},
+    onEnableBluetooth: () -> Unit = {}
+) {
     val isConnected by viewModel.isConnected.collectAsState()
     val simulationMode by viewModel.simulationMode.collectAsState()
     val connectionError by viewModel.connectionError.collectAsState()

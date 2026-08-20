@@ -102,4 +102,11 @@ class BluetoothViewModel : ViewModel() {
         _connectionError.value = null
         _connectionSuccess.value = null
     }
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
+    val effectiveConnected: Boolean
+        get() = isConnected.value || simulationMode.value
 }

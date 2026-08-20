@@ -66,7 +66,7 @@ class BluetoothRepository {
         }
     }
 
-    fun disconnect() {
+    suspend fun disconnect() = withContext(Dispatchers.IO) {
         try {
             socket?.close()
             socket = null
