@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -31,20 +32,20 @@ import kotlin.math.round
 // ─────────────────────────────────────────────
 private val SPEED_MAP = listOf(
     0   to 0,
-    20  to 39,
-    30  to 58,
-    40  to 78,
-    60  to 117,
-    90  to 174,
-    120 to 232
+    15  to 18,
+    30  to 37,
+    60  to 73,
+    90  to 111,
+    120 to 149,
+    140 to 173
 )
 
 /**
- * Convierte km/h (0-120) al valor del potenciómetro (0-232)
+ * Convierte km/h (0-140) al valor del potenciómetro (0-173)
  * Hace interpolación lineal entre los puntos conocidos
  */
 private fun speedToPotenValue(speedKmh: Float): Int {
-    val clamped = speedKmh.coerceIn(0f, 120f)
+    val clamped = speedKmh.coerceIn(0f, 140f)
 
     for (i in 0 until SPEED_MAP.size - 1) {
         val (lowSpeed, lowPoten) = SPEED_MAP[i]
@@ -55,35 +56,31 @@ private fun speedToPotenValue(speedKmh: Float): Int {
             return round(lowPoten + ratio * (highPoten - lowPoten)).toInt()
         }
     }
-    return 232
+    return 173
 }
 
 /**
  * Calcula el ángulo de la aguja adaptado a la nueva imagen.
  *
  * Nueva imagen:
- * - El arco físico va de ~225° (donde está el 20) hasta ~135° (donde está el 120)
- * - El centro del arco es el 70 km/h (no 60)
- * - De 0 a 18 km/h la aguja se mantiene en la posición del 20 (inicio del arco)
- * - De 18 a 120 la aguja se distribuye en todo el recorrido del arco
+ * - El arco físico va de ~225° (donde está el 20) hasta ~135° (donde está el 140 ahora)
+ * - De 0 a 18 km/h la aguja se mantiene en la posición de inicio
+ * - De 18 a 140 la aguja se distribuye en todo el recorrido del arco
  */
 private fun calculateNeedleAngle(speed: Float): Float {
-    val startAngle = 250f   // Posición física del 20 en la imagen (inicio del arco)
-    val endAngle   = 106f   // Posición física del 120 en la imagen (final del arco)
-    // Recorrido total cruza el 0°/360°: de 228° → 360° + 0° → 132° = 264°
+    val startAngle = 250f   // Posición física del inicio en la imagen
+    val endAngle   = 106f   // Posición física del final en la imagen (140 km/h)
+
     val sweepAngle = (360f - startAngle) + endAngle
 
-    // De 0 a 18: la aguja se queda fija en el inicio (posición del 20)
+    // De 0 a 18: la aguja se queda fija en el inicio
     if (speed <= 18f) {
-        // Pequeño movimiento proporcional de 0 a 18 para que no esté 100% fija
-        // Solo recorre el 3% del arco total (se mueve apenas)
         val microRatio = speed / 18f * 0.03f
         val angle = startAngle + (microRatio * sweepAngle)
         return if (angle >= 360f) angle - 360f else angle
     }
 
-    // De 18 a 120: distribuir en todo el arco
-    // El 18 mapea al inicio (0%) y el 120 mapea al final (100%)
+    // De 18 a 140: distribuir en todo el arco
     val ratio = ((speed - 18f) / (120f - 18f)).coerceIn(0f, 1f)
     val angle = startAngle + (ratio * sweepAngle)
     return if (angle >= 360f) angle - 360f else angle
@@ -92,8 +89,8 @@ private fun calculateNeedleAngle(speed: Float): Float {
 /**
  * Pantalla de velocímetro
  *
- * - Muestra velocidad en km/h (0-120)
- * - Envía valor del potenciómetro (0-232) al módulo Bluetooth
+ * - Muestra velocidad en km/h (0-140)
+ * - Envía valor del potenciómetro (0-173) al módulo Bluetooth
  * - Funciona en modo local sin necesidad de conexión
  */
 @Composable
@@ -158,6 +155,9 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
             FilledTonalButton(onClick = { targetSpeed = 120f }) {
                 Text("120")
             }
+//            FilledTonalButton(onClick = { targetSpeed = 140f }) {
+//                Text("140")
+//            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -203,7 +203,7 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
                 Slider(
                     value = targetSpeed,
                     onValueChange = { targetSpeed = it },
-                    valueRange = 0f..120f,
+                    valueRange = 0f..140f,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -217,7 +217,7 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
                 ) {
                     FilledIconButton(
                         onClick = {
-                            targetSpeed = (targetSpeed - 10f).coerceIn(0f, 120f)
+                            targetSpeed = (targetSpeed - 10f).coerceIn(0f, 140f)
                         },
                         modifier = Modifier.size(48.dp)
                     ) {
@@ -237,7 +237,7 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
 
                     FilledTonalIconButton(
                         onClick = {
-                            targetSpeed = (targetSpeed - 1f).coerceIn(0f, 120f)
+                            targetSpeed = (targetSpeed - 1f).coerceIn(0f, 140f)
                         },
                         modifier = Modifier.size(48.dp)
                     ) {
@@ -250,7 +250,7 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
 
                     FilledTonalIconButton(
                         onClick = {
-                            targetSpeed = (targetSpeed + 1f).coerceIn(0f, 120f)
+                            targetSpeed = (targetSpeed + 1f).coerceIn(0f, 140f)
                         },
                         modifier = Modifier.size(48.dp)
                     ) {
@@ -263,7 +263,7 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
 
                     FilledIconButton(
                         onClick = {
-                            targetSpeed = (targetSpeed + 10f).coerceIn(0f, 120f)
+                            targetSpeed = (targetSpeed + 10f).coerceIn(0f, 140f)
                         },
                         modifier = Modifier.size(48.dp)
                     ) {
@@ -331,31 +331,6 @@ private fun SpeedometerGauge(
     }
 }
 
-//@Composable
-//private fun SpeedDisplay(speed: Float) {
-//    Box(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .offset(y = (-35).dp),
-//        contentAlignment = Alignment.Center
-//    ) {
-//        Column(
-//            horizontalAlignment = Alignment.CenterHorizontally,
-//            verticalArrangement = Arrangement.Center
-//        ) {
-//            Text(
-//                text = "${speed.toInt()}",
-//                style = MaterialTheme.typography.displayLarge.copy(
-//                    fontSize = 60.sp,
-//                    fontWeight = FontWeight.Bold,
-//                    letterSpacing = (-2).sp
-//                ),
-//                color = Color(0xFFc8f0d4)
-//            )
-//        }
-//    }
-//}
-
 @Composable
 private fun SpeedDisplay(speed: Float) {
     val dotMatrixFontFamily = FontFamily(
@@ -406,7 +381,7 @@ private fun SpeedNeedle(
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNeedle(
+private fun DrawScope.drawNeedle(
     centerX: Float,
     centerY: Float,
     length: Float
@@ -431,7 +406,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNeedle(
     drawPath(path = needlePath, color = Color(0xFFff3838))
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCenterCircles(
+private fun DrawScope.drawCenterCircles(
     centerX: Float,
     centerY: Float
 ) {

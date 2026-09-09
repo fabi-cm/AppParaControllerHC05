@@ -88,10 +88,12 @@ class BluetoothViewModel : ViewModel() {
     }
 
     fun disconnect() {
-        repository.disconnect()
-        _isConnected.value = false
-        _connectedDeviceName.value = null
-        _connectionSuccess.value = null
+        viewModelScope.launch {
+            repository.disconnect()
+            _isConnected.value = false
+            _connectedDeviceName.value = null
+            _connectionSuccess.value = null
+        }
     }
 
     fun loadPairedDevices() {
@@ -103,8 +105,12 @@ class BluetoothViewModel : ViewModel() {
         _connectionSuccess.value = null
     }
 
+    fun setError(message: String) {
+        _connectionError.value = message
+    }
+
     fun clearError() {
-        _errorMessage.value = null
+        _connectionError.value = null
     }
 
     val effectiveConnected: Boolean
