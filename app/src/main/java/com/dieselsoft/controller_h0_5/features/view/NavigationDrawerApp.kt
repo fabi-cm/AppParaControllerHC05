@@ -113,6 +113,7 @@ fun NavigationDrawerApp(viewModel: BluetoothViewModel) {
                                 currentScreen = "home"
                             }
                         )
+                        "calibration" -> CalibrationScreen(viewModel)
                     }
                 }
             }
@@ -268,6 +269,18 @@ fun DrawerContent(
             label = { Text("Devices") },
             selected = currentScreen == "devices",
             onClick = { onScreenSelected("devices") }
+        )
+
+        NavigationDrawerItem(
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = null
+                )
+            },
+            label = { Text("Calibrar") },
+            selected = currentScreen == "calibration",
+            onClick = { onScreenSelected("calibration") }
         )
     }
 }

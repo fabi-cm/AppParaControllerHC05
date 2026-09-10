@@ -1,16 +1,19 @@
 package com.dieselsoft.controller_h0_5.features.viewmodel
 
+import android.app.Application
 import android.bluetooth.BluetoothDevice
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dieselsoft.controller_h0_5.data.BluetoothRepository
+import com.dieselsoft.controller_h0_5.data.CalibrationRepository
 import com.dieselsoft.controller_h0_5.domain.SendBluetoothValueUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class BluetoothViewModel : ViewModel() {
+class BluetoothViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = BluetoothRepository()
+    private val calibrationRepository = CalibrationRepository(application)
     private val sendValueUseCase = SendBluetoothValueUseCase(repository)
 
     private val _isConnected = MutableStateFlow(false)
@@ -34,9 +37,23 @@ class BluetoothViewModel : ViewModel() {
     private val _simulationMode = MutableStateFlow(false)
     val simulationMode = _simulationMode.asStateFlow()
 
+    // Lógica de Calibración
+    private val _calibrationMap = MutableStateFlow(calibrationRepository.getCalibrationMap())
+    val calibrationMap = _calibrationMap.asStateFlow()
+
     private var lastConnectedDevice: BluetoothDevice? = null
     private val _lastDeviceName = MutableStateFlow<String?>(null)
     val lastDeviceName = _lastDeviceName.asStateFlow()
+
+    fun updateCalibration(speed: Int, value: Int) {
+        calibrationRepository.saveCalibrationPoint(speed, value)
+        _calibrationMap.value = calibrationRepository.getCalibrationMap()
+    }
+
+    fun resetCalibration() {
+        calibrationRepository.resetToDefaults()
+        _calibrationMap.value = calibrationRepository.getCalibrationMap()
+    }
 
     fun checkBluetoothAvailability() {
         if (!repository.isBluetoothAvailable()) {

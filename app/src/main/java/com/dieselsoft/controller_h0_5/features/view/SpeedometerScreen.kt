@@ -27,45 +27,33 @@ import com.dieselsoft.controller_h0_5.features.viewmodel.BluetoothViewModel
 import kotlin.math.max
 import kotlin.math.round
 
-// ─────────────────────────────────────────────
-// Tabla de mapeo: km/h → valor del potenciómetro
-// ─────────────────────────────────────────────
-private val SPEED_MAP = listOf(
-    0   to 0,
-    15  to 18,
-    30  to 37,
-    60  to 73,
-    90  to 111,
-    120 to 149,
-    140 to 173
-)
-
 /**
- * Convierte km/h (0-140) al valor del potenciómetro (0-173)
+ * Convierte km/h al valor del potenciómetro usando la tabla dinámica
  * Hace interpolación lineal entre los puntos conocidos
  */
-private fun speedToPotenValue(speedKmh: Float): Int {
-    val clamped = speedKmh.coerceIn(0f, 140f)
+private fun speedToPotenValue(speedKmh: Float, calibrationMap: Map<Int, Int>): Int {
+    val sortedSpeeds = calibrationMap.keys.sorted()
+    if (sortedSpeeds.isEmpty()) return 0
+    
+    val clamped = speedKmh.coerceIn(sortedSpeeds.first().toFloat(), sortedSpeeds.last().toFloat())
 
-    for (i in 0 until SPEED_MAP.size - 1) {
-        val (lowSpeed, lowPoten) = SPEED_MAP[i]
-        val (highSpeed, highPoten) = SPEED_MAP[i + 1]
+    for (i in 0 until sortedSpeeds.size - 1) {
+        val lowSpeed = sortedSpeeds[i]
+        val highSpeed = sortedSpeeds[i + 1]
+        
+        val lowPoten = calibrationMap[lowSpeed] ?: 0
+        val highPoten = calibrationMap[highSpeed] ?: 0
 
         if (clamped <= highSpeed) {
             val ratio = (clamped - lowSpeed) / (highSpeed - lowSpeed).toFloat()
             return round(lowPoten + ratio * (highPoten - lowPoten)).toInt()
         }
     }
-    return 173
+    return calibrationMap[sortedSpeeds.last()] ?: 0
 }
 
 /**
  * Calcula el ángulo de la aguja adaptado a la nueva imagen.
- *
- * Nueva imagen:
- * - El arco físico va de ~225° (donde está el 20) hasta ~135° (donde está el 140 ahora)
- * - De 0 a 18 km/h la aguja se mantiene en la posición de inicio
- * - De 18 a 140 la aguja se distribuye en todo el recorrido del arco
  */
 private fun calculateNeedleAngle(speed: Float): Float {
     val startAngle = 250f   // Posición física del inicio en la imagen
@@ -88,14 +76,11 @@ private fun calculateNeedleAngle(speed: Float): Float {
 
 /**
  * Pantalla de velocímetro
- *
- * - Muestra velocidad en km/h (0-140)
- * - Envía valor del potenciómetro (0-173) al módulo Bluetooth
- * - Funciona en modo local sin necesidad de conexión
  */
 @Composable
 fun SpeedometerScreen(viewModel: BluetoothViewModel) {
     val isConnected by viewModel.isConnected.collectAsState()
+    val calibrationMap by viewModel.calibrationMap.collectAsState()
 
     var targetSpeed by remember { mutableFloatStateOf(0f) }
 
@@ -110,9 +95,9 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
 
     val displaySpeed = max(0f, animatedSpeed)
 
-    LaunchedEffect(targetSpeed) {
+    LaunchedEffect(targetSpeed, calibrationMap) {
         if (isConnected) {
-            val potenValue = speedToPotenValue(targetSpeed)
+            val potenValue = speedToPotenValue(targetSpeed, calibrationMap)
             viewModel.sendValue(potenValue)
         }
     }
@@ -135,29 +120,21 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Botones de velocidades fijas
+        // Botones de velocidades fijas dinámicos
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            FilledTonalButton(onClick = { targetSpeed = 0f }) {
-                Text("0")
+            // Mostrar solo los puntos principales para no saturar
+            val mainPoints = listOf(0, 30, 60, 90, 120, 140)
+            mainPoints.forEach { speed ->
+                FilledTonalButton(
+                    onClick = { targetSpeed = speed.toFloat() },
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Text("$speed")
+                }
             }
-            FilledTonalButton(onClick = { targetSpeed = 30f }) {
-                Text("30")
-            }
-            FilledTonalButton(onClick = { targetSpeed = 60f }) {
-                Text("60")
-            }
-            FilledTonalButton(onClick = { targetSpeed = 90f }) {
-                Text("90")
-            }
-            FilledTonalButton(onClick = { targetSpeed = 120f }) {
-                Text("120")
-            }
-//            FilledTonalButton(onClick = { targetSpeed = 140f }) {
-//                Text("140")
-//            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -191,7 +168,7 @@ fun SpeedometerScreen(viewModel: BluetoothViewModel) {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "[${speedToPotenValue(targetSpeed)}]",
+                            text = "[${speedToPotenValue(targetSpeed, calibrationMap)}]",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         )
